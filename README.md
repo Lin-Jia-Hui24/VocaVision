@@ -238,7 +238,7 @@ Local scene checks are not enough when a recurring character changes across the 
 ### 1. Clone and enter the project
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/Lin-Jia-Hui24/VocaVision.git
 cd VocaVision
 ```
 
