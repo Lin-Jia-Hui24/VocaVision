@@ -16,6 +16,10 @@ workspace/
 !assets/
 !assets/examples/
 !assets/examples/*.mp4
+!assets/case-studies/
+!assets/case-studies/*.png
+!assets/case-studies/*.jpg
+!assets/case-studies/*.jpeg
 
 # Python
 __pycache__/
