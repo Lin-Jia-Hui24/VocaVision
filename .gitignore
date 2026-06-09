@@ -1,0 +1,47 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Generated workspaces and media outputs
+workspace/
+*.mp4
+*.wav
+*.jpeg
+*.jpg
+*.png
+*.ass
+*.meta.json
+*.jsonl
+!assets/
+!assets/examples/
+!assets/examples/*.mp4
+
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+*.egg-info/
+build/
+dist/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local editor / tool state
+.vscode/
+.idea/
+.trae/
+.trae_deps/
+
+# OS files
+.DS_Store
+Thumbs.db

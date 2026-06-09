@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>VocaVision 体验学习</title>
+    <link rel="stylesheet" href="/assets/study.css" />
+  </head>
+  <body>
+    <header class="study-topbar">
+      <div>
+        <strong>VocaVision</strong>
+        <span>体验学习</span>
+      </div>
+      <a href="/" aria-label="返回教师控制台">教师控制台</a>
+    </header>
+
+    <main class="study-shell">
+      <section id="setup-panel" class="setup-panel">
+        <div class="setup-copy">
+          <p id="setup-eyebrow" class="eyebrow">匿名进入</p>
+          <h1 id="setup-title">选择一组单词视频，开始轻量学习</h1>
+          <p id="setup-description">
+            不需要手机号或姓名。系统只记录匿名编号、观看行为、答题结果和最后的学习反馈。
+          </p>
+        </div>
+
+        <form id="study-form" class="study-form">
+          <fieldset id="package-fieldset">
+            <legend>学习包</legend>
+            <div id="package-list" class="package-list" aria-live="polite"></div>
+          </fieldset>
+
+          <fieldset class="compact-grid">
+            <label>
+              <span>班级码，可空</span>
+              <input id="class-code" name="class_code" maxlength="80" autocomplete="off" placeholder="例如 Class-A" />
+            </label>
+            <label>
+              <span>年级</span>
+              <select id="grade-band" name="grade_band">
+                <option value="">不填写</option>
+                <option value="grade7">初一</option>
+                <option value="grade8">初二</option>
+                <option value="grade9">初三</option>
+                <option value="other">其他</option>
+              </select>
+            </label>
+          </fieldset>
+
+          <fieldset>
+            <legend>英语水平自评</legend>
+            <div class="choice-row" data-radio-group="english-level">
+              <button type="button" data-value="beginner">有点吃力</button>
+              <button type="button" data-value="middle">一般</button>
+              <button type="button" data-value="confident">比较有信心</button>
+            </div>
+          </fieldset>
+
+          <fieldset>
+            <legend>这些单词之前见过吗？</legend>
+            <div class="choice-row" data-radio-group="word-familiarity">
+              <button type="button" data-value="new">大多没见过</button>
+              <button type="button" data-value="mixed">有些见过</button>
+              <button type="button" data-value="known">基本见过</button>
+            </div>
+          </fieldset>
+
+          <p id="setup-error" class="error-text" role="alert"></p>
+          <button id="start-button" class="primary-button" type="submit">匿名开始学习</button>
+        </form>
+      </section>
+
+      <section id="learning-panel" class="learning-panel hidden" aria-live="polite">
+        <div class="session-strip">
+          <div>
+            <span id="anonymous-label">匿名学习者</span>
+            <strong id="package-title"></strong>
+          </div>
+          <div id="mode-chip" class="mode-chip"></div>
+        </div>
+
+        <nav class="step-tabs" aria-label="学习步骤">
+          <button type="button" class="active" data-step="storybook">看绘本</button>
+          <button type="button" data-step="video">完整视频</button>
+          <button type="button" data-step="cloze">挖空复习</button>
+          <button type="button" data-step="practice">练习题</button>
+          <button type="button" data-step="survey">最后问卷</button>
+        </nav>
+
+        <section id="storybook-step" class="study-step">
+          <div class="section-head">
+            <h2>绘本预习</h2>
+            <span>先看画面和句子</span>
+          </div>
+          <div id="storybook-list" class="storybook-list"></div>
+          <div id="storybook-player-panel" class="inline-player hidden">
+            <video id="storybook-scene-video" controls playsinline></video>
+            <p id="storybook-scene-caption" class="feedback-text"></p>
+          </div>
+          <button id="to-video-button" type="button" class="secondary-button">去看完整视频</button>
+        </section>
+
+        <section id="video-step" class="study-step hidden">
+          <div class="video-layout">
+            <video id="study-video" controls playsinline></video>
+            <aside>
+              <h2>本组单词</h2>
+              <div id="word-list" class="word-list"></div>
+              <button id="to-cloze-button" type="button" class="secondary-button">去挖空复习</button>
+            </aside>
+          </div>
+        </section>
+
+        <section id="cloze-step" class="study-step hidden">
+          <div class="section-head">
+            <h2>挖空视频与回想</h2>
+            <span id="cloze-count"></span>
+          </div>
+          <video id="cloze-video" class="review-video" controls playsinline></video>
+          <div id="cloze-question-list" class="question-list"></div>
+          <button id="to-practice-button" type="button" class="secondary-button">去做练习题</button>
+        </section>
+
+        <section id="practice-step" class="study-step hidden">
+          <div class="section-head">
+            <h2>理解练习</h2>
+            <span id="practice-count"></span>
+          </div>
+          <div id="practice-question-list" class="question-list"></div>
+          <button id="to-survey-button" type="button" class="secondary-button">填写最后问卷</button>
+        </section>
+
+        <section id="survey-step" class="study-step hidden">
+          <div class="section-head">
+            <h2>学习反馈</h2>
+            <span>约 2 分钟</span>
+          </div>
+          <form id="survey-form" class="survey-form">
+            <div id="survey-items" class="survey-items"></div>
+            <label class="wide-field">
+              <span>最记得哪个单词？</span>
+              <input name="memorable_word" maxlength="80" autocomplete="off" />
+            </label>
+            <label class="wide-field">
+              <span>哪里最有帮助或最困惑？可空</span>
+              <textarea name="comment" maxlength="240" rows="3"></textarea>
+            </label>
+            <p id="survey-error" class="error-text" role="alert"></p>
+            <button class="primary-button" type="submit">提交并完成</button>
+          </form>
+          <div id="finish-panel" class="finish-panel hidden">
+            <h2>完成啦</h2>
+            <p>谢谢你的体验，教学评估人员会看到匿名学习数据。愿意的话，还可以继续帮我们比较几组视频。</p>
+            <button id="start-pairwise-button" type="button" class="secondary-button">继续做视频对比</button>
+          </div>
+        </section>
+
+        <section id="pairwise-step" class="study-step hidden">
+          <div class="section-head">
+            <h2>可选视频对比</h2>
+            <span id="pairwise-progress"></span>
+          </div>
+          <div id="pairwise-empty" class="finish-panel hidden">
+            <h2>暂无可对比视频</h2>
+            <p>研究者可以稍后配置完整系统与消融系统的视频对。</p>
+          </div>
+          <article id="pairwise-panel" class="pairwise-panel hidden">
+            <div class="pairwise-head">
+              <div>
+                <span id="pairwise-title"></span>
+                <strong id="pairwise-words"></strong>
+              </div>
+              <button id="skip-pairwise-button" type="button" class="secondary-button compact-button">跳过这一组</button>
+            </div>
+            <div class="pairwise-videos">
+              <div>
+                <h3>版本 A</h3>
+                <video id="pairwise-left-video" controls playsinline></video>
+                <div id="pairwise-left-artifacts" class="expert-artifacts"></div>
+              </div>
+              <div>
+                <h3>版本 B</h3>
+                <video id="pairwise-right-video" controls playsinline></video>
+                <div id="pairwise-right-artifacts" class="expert-artifacts"></div>
+              </div>
+            </div>
+            <form id="pairwise-form" class="pairwise-form">
+              <div id="pairwise-items" class="survey-items"></div>
+              <label class="wide-field">
+                <span id="pairwise-comment-label">你觉得差异主要在哪里？可空</span>
+                <textarea name="pairwise_comment" maxlength="240" rows="3"></textarea>
+              </label>
+              <p id="pairwise-error" class="error-text" role="alert"></p>
+              <button class="primary-button" type="submit">提交这一组</button>
+            </form>
+          </article>
+        </section>
+      </section>
+    </main>
+
+    <script src="/assets/study.js" defer></script>
+  </body>
+</html>

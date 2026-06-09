@@ -1,0 +1,506 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>VocaVision Studio</title>
+    <link rel="stylesheet" href="/assets/styles.css" />
+  </head>
+  <body>
+    <div class="page-shell">
+      <header class="hero-card">
+        <div class="hero-copy">
+          <p class="eyebrow">VocaVision Story Video Studio</p>
+          <h1>把单词做成会讲故事的学习短片 / Story-Driven Vocabulary Videos</h1>
+          <p class="hero-description">
+            从词义确认到故事成片，VocaVision
+            会把教学目标、视觉表现和视频交付串成一条可追踪的创作流程。 / From
+            sense review to final delivery, VocaVision keeps the learning goal,
+            visuals, and video output aligned in one trackable workflow.
+          </p>
+          <div class="hero-points">
+            <span class="hero-pill">先确认义项 / Review Meaning First</span>
+            <span class="hero-pill">再生成故事 / Build Story Next</span>
+            <span class="hero-pill">最后交付视频 / Deliver Video Last</span>
+          </div>
+        </div>
+        <div class="hero-panel">
+          <div class="status-card">
+            <span class="status-label">环境状态 / Environment</span>
+            <strong id="env-status">正在检查... / Checking...</strong>
+            <p id="env-hint">
+              读取模型服务、视频工具和最近项目概览。 / Reading service readiness
+              and recent projects.
+            </p>
+            <p id="connection-status" class="status-subline">
+              正在确认前端与后端连接状态。 / Checking frontend to backend
+              connectivity.
+            </p>
+          </div>
+          <div class="warm-orb orb-one"></div>
+          <div class="warm-orb orb-two"></div>
+        </div>
+      </header>
+
+      <main class="workspace-grid">
+        <div class="workflow-column">
+          <section class="panel-card input-panel" id="setup-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="section-kicker">Step 1</p>
+                <h2>创作设定 / Project Setup</h2>
+                <p class="section-helper">
+                  先定义项目
+                  ID、目标词和运行配置。建议先用测试模式验证故事与视觉方向。 /
+                  Set the project ID, target words, and run options first. Test
+                  mode is the safest way to validate story and visual direction.
+                </p>
+              </div>
+              <span class="section-tag">输入与配置 / Setup</span>
+            </div>
+
+            <label class="field-label" for="project-id"
+              >项目 ID / Project ID</label
+            >
+            <input
+              id="project-id"
+              class="text-input"
+              type="text"
+              placeholder="例如 warm-demo-001 / e.g. warm-demo-001"
+            />
+
+            <label class="field-label" for="words-text"
+              >目标词 / Target Words</label
+            >
+            <textarea
+              id="words-text"
+              class="text-area"
+              placeholder="支持逗号、空格或换行分隔 / Use commas, spaces, or line breaks. Example: rabbit, carrot, monkey"
+            ></textarea>
+
+            <div class="chip-row" id="word-preview"></div>
+
+            <div class="settings-grid">
+              <label class="toggle-card">
+                <input id="test-mode" type="checkbox" checked />
+                <span>
+                  <strong>测试模式 / Test Mode</strong>
+                  <small
+                    >默认只跑 2 个 scene，媒体并发默认 2，更适合快速验证。 /
+                    Runs only 2 scenes with 2 media workers by default for
+                    faster validation.</small
+                  >
+                </span>
+              </label>
+              <label class="toggle-card">
+                <input id="storyboard-only" type="checkbox" />
+                <span>
+                  <strong>绘本测试模式 / Storyboard Only</strong>
+                  <small
+                    >只生成剧本、关键帧和绘本字幕，不做 TTS
+                    和视频，适合低成本验证文案与画面。 / Generate only story
+                    draft, keyframes, and picture-book captions. Skip TTS and
+                    video for cheaper testing.</small
+                  >
+                </span>
+              </label>
+              <label class="toggle-card">
+                <input id="auto-accept" type="checkbox" />
+                <span>
+                  <strong
+                    >自动采用推荐义项 / Auto Accept Recommended Sense</strong
+                  >
+                  <small
+                    >如果你不想逐个切换候选义项，可以直接采用系统推荐。 / Skip
+                    manual selection and use the system recommendation.</small
+                  >
+                </span>
+              </label>
+            </div>
+
+            <div class="numeric-grid">
+              <label>
+                <span class="field-label">学习模式 / Learning Mode</span>
+                <select id="learning-mode" class="text-input">
+                  <option value="auto">自动判断 / Auto</option>
+                  <option value="deep_single_word">
+                    单词深学 / Deep Single Word
+                  </option>
+                  <option value="theme_story">主题故事 / Theme Story</option>
+                  <option value="vocab_sprint">词汇速学 / Vocab Sprint</option>
+                </select>
+                <small id="learning-mode-hint" class="input-helper">
+                  自动模式下，planner
+                  会结合词数和教学目标，在单词深学、主题故事和词汇速学之间选择。
+                  / In auto mode, the planner chooses between deep study, theme
+                  story, and vocab sprint.
+                </small>
+              </label>
+              <label>
+                <span class="field-label">最大 scene 数 / Max Scenes</span>
+                <input
+                  id="max-scenes"
+                  class="text-input"
+                  type="number"
+                  min="1"
+                  placeholder="测试模式下默认 2 / Defaults to 2 in test mode"
+                />
+              </label>
+              <label>
+                <span class="field-label">媒体并发 / Media Workers</span>
+                <input
+                  id="media-workers"
+                  class="text-input"
+                  type="number"
+                  min="1"
+                  placeholder="测试模式默认 2，可调整 / Defaults to 2 in test mode"
+                />
+              </label>
+              <label>
+                <span class="field-label">故事通过阈值 / Story Threshold</span>
+                <input
+                  id="story-score-threshold"
+                  class="text-input"
+                  type="number"
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  placeholder="默认 8.0 / Default 8.0"
+                />
+                <small class="input-helper">
+                  用于故事脚本评审，不直接决定单张 scene 图片是否通过。 /
+                  Applies to story review, not individual scene-image approval.
+                </small>
+              </label>
+              <label>
+                <span class="field-label"
+                  >全局一致性阈值 / Global Review Threshold</span
+                >
+                <input
+                  id="global-visual-score-threshold"
+                  class="text-input"
+                  type="number"
+                  min="0"
+                  max="10"
+                  step="0.1"
+                  placeholder="默认 8.0 / Default 8.0"
+                />
+                <small class="input-helper">
+                  用于整组 scene 的全局一致性复审，不直接拦截单个 scene
+                  的首轮图片。 / Applies to full-project consistency review, not
+                  a single scene's first-pass image.
+                </small>
+              </label>
+            </div>
+
+            <div class="panel-action-strip">
+              <div>
+                <strong>先检查词义方案 / Review Senses First</strong>
+                <p class="panel-action-note">
+                  输入单词后先确认义项，后面的故事和画面才会更稳定。 / Confirm
+                  the sense before generating the story and visuals.
+                </p>
+              </div>
+              <button id="analyze-button" class="secondary-button">
+                检查词义方案 / Review Senses
+              </button>
+            </div>
+          </section>
+
+          <section class="panel-card sense-panel" id="sense-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="section-kicker">Step 2</p>
+                <h2>义项确认 / Sense Check</h2>
+                <p class="section-helper">
+                  系统会先给出推荐义项，你可以直接采用，也可以切换到更适合教学画面的候选。
+                  / The system suggests a preferred sense first, and you can
+                  keep it or switch to a more teachable visual interpretation.
+                </p>
+              </div>
+              <span class="section-tag">系统先猜 / System Suggests First</span>
+            </div>
+            <div id="sense-container" class="stack-list empty-state">
+              先输入词表并点击“分析词义”，这里会展示每个词更适合教学的义项候选。
+              / Analyze your words first to see learner-friendly sense
+              suggestions.
+            </div>
+
+            <div class="log-heading review-title related-family-heading">
+              <h3>扩展词预览 / Related Word Family</h3>
+              <p class="review-intro">
+                当模式会把单个种子词扩展成词汇家族时，这里会提前展示系统补出的相关词。
+                / When one seed word expands into a word family, the system will
+                preview the added related words here.
+              </p>
+            </div>
+            <div id="related-word-family" class="stack-list empty-state">
+              如果当前模式会自动扩词，这里会显示原词和系统扩展词。 / If the
+              current mode expands one seed word, the original word and system
+              added words will appear here.
+            </div>
+
+            <div class="panel-action-strip panel-action-strip-strong">
+              <div>
+                <strong
+                  >确认好义项后再生成视频 / Start Video Generation After Sense
+                  Check</strong
+                >
+                <p class="panel-action-note">
+                  这一键会正式进入故事、关键帧、全局一致性以及后续交付流程；如果开启绘本测试模式，则会在关键帧阶段收尾。
+                  / This starts story drafting, keyframe review, global
+                  consistency, and delivery steps. In storyboard-only mode, the
+                  run stops after approved keyframes.
+                </p>
+              </div>
+              <button id="run-button" class="primary-button">
+                生成学习短片 / Create Learning Video
+              </button>
+            </div>
+          </section>
+
+          <section
+            id="system-message"
+            class="system-message hidden"
+            role="status"
+            aria-live="polite"
+          ></section>
+
+          <section class="panel-card progress-panel" id="progress-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="section-kicker">Step 3</p>
+                <h2>制作进度 / Production Progress</h2>
+                <p class="section-helper">
+                  查看故事、视觉和媒体生成的当前阶段，必要时打开项目资料继续排查。
+                  / Track the story, visual, and media stages, then open project
+                  files whenever you need deeper diagnostics.
+                </p>
+              </div>
+              <span id="job-badge" class="section-tag muted-tag"
+                >尚未开始 / Not Started</span
+              >
+            </div>
+
+            <div id="timeline" class="timeline-grid"></div>
+
+            <div class="status-summary">
+              <div>
+                <span class="mini-label">当前项目 / Project</span>
+                <strong id="active-project">-</strong>
+              </div>
+              <div>
+                <span class="mini-label">当前阶段 / Stage</span>
+                <strong id="active-stage">-</strong>
+              </div>
+              <div>
+                <span class="mini-label">场景数量 / Scenes</span>
+                <strong id="active-scene-count">-</strong>
+              </div>
+            </div>
+
+            <div id="scene-summary" class="scene-grid empty-state">
+              运行后会在这里显示每个 scene 的状态。 / Scene status will appear
+              here after the run starts.
+            </div>
+
+            <section class="review-section">
+              <div class="log-heading review-title">
+                <h3>项目资料 / Project Files</h3>
+              </div>
+              <div id="project-files" class="artifact-grid empty-state">
+                当前项目的状态快照、事件日志和迭代记录会显示在这里。 / State
+                snapshots, event logs, and iteration records for the current
+                project will appear here.
+              </div>
+            </section>
+
+            <section class="review-section">
+              <div class="log-heading">
+                <h3>过程播报 / Progress Feed</h3>
+                <button id="refresh-button" class="ghost-button">
+                  同步进度 / Sync Now
+                </button>
+              </div>
+              <div id="event-log" class="log-list empty-state">
+                尚无进展播报。 / No progress updates yet.
+              </div>
+            </section>
+
+            <section class="review-section">
+              <div class="log-heading review-title">
+                <h3>复盘面板 / Review Panels</h3>
+                <p class="review-intro">
+                  把故事、关键帧和全局一致性审查集中在一起，方便你判断内容是否真的能教会用户。
+                  / Review story, keyframe, and global consistency decisions
+                  together to judge whether the output truly teaches the word
+                  well.
+                </p>
+              </div>
+              <div id="review-panels" class="accordion-stack empty-state">
+                运行后，这里会生成故事迭代、视觉迭代和全局一致性复盘。 / Story,
+                visual, and global review summaries will appear here after the
+                run starts.
+              </div>
+            </section>
+          </section>
+
+          <section class="panel-card output-panel" id="output-panel">
+            <div class="panel-heading">
+              <div>
+                <p class="section-kicker">Step 4</p>
+                <h2>成片预览 / Final Preview</h2>
+                <p class="section-helper">
+                  这里优先展示最终视频和交付入口，适合用来做演示、复核和导出。 /
+                  This area prioritizes the final video and delivery links for
+                  demos, review, and export.
+                </p>
+              </div>
+              <span class="section-tag">交付结果 / Delivery</span>
+            </div>
+
+            <div id="result-summary" class="result-summary empty-state">
+              生成完成后，这里会展示最终视频预览和下载入口。 / The final video
+              preview and download link will appear here after completion.
+            </div>
+
+            <button
+              id="promote-storyboard-button"
+              class="primary-button output-action hidden"
+              type="button"
+            >
+              把绘本变成视频 / Turn Storyboard Into Video
+            </button>
+
+            <video
+              id="video-preview"
+              class="video-preview hidden"
+              controls
+            ></video>
+
+            <div id="artifact-links" class="artifact-grid"></div>
+
+            <section class="review-section">
+              <div class="log-heading review-title">
+                <h3>学习结果摘要 / Learning Summary</h3>
+                <p class="review-intro">
+                  做完练习后，这里会统计正确率，并提示哪些词和哪些 scene
+                  值得重新回看。 / After you answer the review questions, this
+                  section highlights your score and what to revisit.
+                </p>
+              </div>
+              <div id="learning-summary" class="summary-grid empty-state">
+                完成几道题后，这里会生成学习结果摘要。 / Answer a few questions
+                to unlock the learning summary.
+              </div>
+            </section>
+
+            <section class="review-section">
+              <div class="log-heading review-title">
+                <h3>挖空复习 / Cloze Challenge</h3>
+                <p class="review-intro">
+                  用同一段视频再看一遍，但把关键词挖空，然后直接做选择题复习。 /
+                  Replay the same video with missing keywords, then answer quick
+                  review choices.
+                </p>
+              </div>
+              <video
+                id="cloze-video-preview"
+                class="video-preview hidden"
+                controls
+              ></video>
+              <div id="cloze-challenge" class="quiz-grid empty-state">
+                挖空视频和互动选择题会在这里出现。 / The cloze video and
+                interactive choices will appear here.
+              </div>
+            </section>
+
+            <section class="review-section">
+              <div class="log-heading review-title">
+                <h3>绘本复习 / Storybook Review</h3>
+                <p class="review-intro">
+                  逐帧回看关键帧和字幕，帮助用户像翻绘本一样复习故事与词义。 /
+                  Review each keyframe and subtitle like a picture book.
+                </p>
+              </div>
+              <div id="storybook-review" class="storybook-grid empty-state">
+                关键帧与字幕复习卡会在这里出现。 / Keyframe review cards will
+                appear here.
+              </div>
+              <div
+                id="storybook-player-panel"
+                class="storybook-player-panel hidden"
+              >
+                <div class="log-heading review-title">
+                  <div>
+                    <h4 id="storybook-player-title">Scene Clip</h4>
+                    <p
+                      id="storybook-player-caption"
+                      class="review-intro storybook-player-caption"
+                    >
+                      点击任意复习卡，即可播放对应片段。 / Click a review card
+                      to play the matching scene clip.
+                    </p>
+                  </div>
+                </div>
+                <video
+                  id="storybook-scene-player"
+                  class="video-preview"
+                  controls
+                ></video>
+              </div>
+            </section>
+
+            <section class="review-section">
+              <div class="log-heading review-title">
+                <h3>教学练习 / Practice Quiz</h3>
+                <p class="review-intro">
+                  看完视频后，继续做几道词汇题，检查是否真的理解并记住了词义。 /
+                  Keep practicing after the video to confirm retention and
+                  understanding.
+                </p>
+              </div>
+              <div id="practice-quiz" class="quiz-grid empty-state">
+                教学练习题会在这里出现。 / Post-video practice questions will
+                appear here.
+              </div>
+            </section>
+          </section>
+        </div>
+        <aside class="panel-card environment-panel">
+          <div class="panel-heading">
+            <div>
+              <p class="section-kicker">Library</p>
+              <h2>项目库 / Project Library</h2>
+              <p class="section-helper">
+                重新打开已有项目、查看当前状态，并直接回到对应的成片或运行资料。
+                / Reopen past projects, inspect their latest state, and jump
+                back to outputs or logs.
+              </p>
+            </div>
+            <span class="section-tag">最近项目 / Recent</span>
+          </div>
+          <div id="recent-projects" class="stack-list empty-state">
+            还没有可显示的项目。 / No recent projects yet.
+          </div>
+        </aside>
+      </main>
+    </div>
+
+    <template id="sense-card-template">
+      <article class="sense-card">
+        <div class="sense-header">
+          <div>
+            <h3 class="sense-word"></h3>
+            <p class="sense-gloss"></p>
+          </div>
+          <span class="recommend-badge">推荐 / Recommended</span>
+        </div>
+        <div class="sense-meta"></div>
+        <div class="radio-group"></div>
+      </article>
+    </template>
+
+    <script src="/assets/app.js"></script>
+  </body>
+</html>

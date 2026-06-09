@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "vocavision"
+version = "0.1.0"
+description = "AI-native English vocabulary learning video generator backend."
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "dashscope>=1.24.6",
+  "fastapi>=0.115.0",
+  "openai>=1.45.0",
+  "pydantic>=2.8.0",
+  "pysubs2>=1.7.3",
+  "requests>=2.32.3",
+  "uvicorn>=0.32.0",
+  "volcengine-python-sdk[ark]>=4.0.18",
+]
+
+[project.scripts]
+vocavision = "vocavision.main:main"
+vocavision-web = "vocavision.web_app:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+vocavision = ["web/*.html", "web/*.css", "web/*.js"]

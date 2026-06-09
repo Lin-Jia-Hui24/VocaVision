@@ -1,0 +1,8 @@
+dashscope>=1.24.6
+fastapi>=0.115.0
+openai>=1.45.0
+pydantic>=2.8.0
+pysubs2>=1.7.3
+requests>=2.32.3
+uvicorn>=0.32.0
+volcengine-python-sdk[ark]>=4.0.18
