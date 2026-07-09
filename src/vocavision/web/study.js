@@ -352,6 +352,28 @@ function renderLearningPackage() {
   renderSurvey();
 }
 
+function createImageWithFallback(src, alt, placeholderText, className = "") {
+  const image = document.createElement("img");
+  if (className) {
+    image.className = className;
+  }
+  image.src = src;
+  image.alt = alt;
+  image.addEventListener(
+    "error",
+    () => {
+      const placeholder = document.createElement("div");
+      placeholder.className = className
+        ? `${className} storybook-placeholder`
+        : "storybook-placeholder";
+      placeholder.textContent = placeholderText;
+      image.replaceWith(placeholder);
+    },
+    { once: true },
+  );
+  return image;
+}
+
 function renderStorybook() {
   const cards = state.package?.storybook_review || [];
   clearChildren(elements.storybookList);
@@ -368,9 +390,11 @@ function renderStorybook() {
     const item = document.createElement("article");
     item.className = "storybook-card";
     if (card.image_url) {
-      const image = document.createElement("img");
-      image.src = card.image_url;
-      image.alt = `Scene ${card.scene_index}`;
+      const image = createImageWithFallback(
+        card.image_url,
+        `Scene ${card.scene_index}`,
+        `Scene ${card.scene_index} 图片暂时不可用`,
+      );
       item.appendChild(image);
     } else {
       const placeholder = document.createElement("div");
@@ -673,9 +697,11 @@ function renderExpertArtifacts(container, studyPackage, label) {
   storybookCards.slice(0, 6).forEach((card) => {
     const item = document.createElement("article");
     if (card.image_url) {
-      const image = document.createElement("img");
-      image.src = card.image_url;
-      image.alt = `${label} scene ${card.scene_index}`;
+      const image = createImageWithFallback(
+        card.image_url,
+        `${label} scene ${card.scene_index}`,
+        `Scene ${card.scene_index} 图片暂时不可用`,
+      );
       item.appendChild(image);
     }
     const text = document.createElement("p");

@@ -280,6 +280,90 @@ def _artifact_url(project_id: str, artifact_name: str, file_path: Path) -> str |
     return f"/api/projects/{project_id}/artifacts/{artifact_name}"
 
 
+def _scene_keyframe_url(project_id: str, scene_index: int, *, iteration: int | None = None) -> str:
+    if iteration is None:
+        return f"/api/projects/{project_id}/scenes/{scene_index}/keyframe"
+    return f"/api/projects/{project_id}/scenes/{scene_index}/keyframes/{iteration}"
+
+
+def _resolve_local_keyframe_path(project_root: Path, scene_index: int, *, iteration: int | None = None) -> Path:
+    image_dir = project_root / "images"
+    if iteration is None:
+        return image_dir / f"scene_{scene_index:02d}_keyframe.jpeg"
+    return image_dir / f"scene_{scene_index:02d}_keyframe_iter_{iteration:02d}.jpeg"
+
+
+def _resolve_scene_image_url(
+    project_root: Path,
+    project_id: str,
+    *,
+    scene_index: Any,
+    iteration: Any | None = None,
+    preferred_iterations: list[Any] | None = None,
+    fallback_url: str | None = None,
+) -> str | None:
+    try:
+        normalized_scene_index = int(scene_index)
+    except (TypeError, ValueError):
+        return fallback_url
+    candidate_iterations: list[int | None] = []
+    if iteration is not None:
+        try:
+            candidate_iterations.append(int(iteration))
+        except (TypeError, ValueError):
+            pass
+    for preferred_iteration in preferred_iterations or []:
+        try:
+            normalized_iteration = int(preferred_iteration)
+        except (TypeError, ValueError):
+            continue
+        if normalized_iteration not in candidate_iterations:
+            candidate_iterations.append(normalized_iteration)
+
+    for normalized_iteration in candidate_iterations:
+        local_path = _resolve_local_keyframe_path(
+            project_root,
+            normalized_scene_index,
+            iteration=normalized_iteration,
+        )
+        if local_path.exists() and local_path.stat().st_size > 0:
+            return _scene_keyframe_url(
+                project_id,
+                normalized_scene_index,
+                iteration=normalized_iteration,
+            )
+
+    local_path = _resolve_local_keyframe_path(
+        project_root,
+        normalized_scene_index,
+        iteration=None,
+    )
+    if local_path.exists() and local_path.stat().st_size > 0:
+        return _scene_keyframe_url(
+            project_id,
+            normalized_scene_index,
+            iteration=None,
+        )
+
+    fallback_candidates = sorted(
+        (project_root / "images").glob(f"scene_{normalized_scene_index:02d}_keyframe_iter_*.jpeg"),
+        reverse=True,
+    )
+    for candidate_path in fallback_candidates:
+        if candidate_path.exists() and candidate_path.stat().st_size > 0:
+            suffix = candidate_path.stem.rsplit("_iter_", 1)[-1]
+            try:
+                detected_iteration = int(suffix)
+            except ValueError:
+                continue
+            return _scene_keyframe_url(
+                project_id,
+                normalized_scene_index,
+                iteration=detected_iteration,
+            )
+    return fallback_url
+
+
 def _safe_float(value: Any) -> float | None:
     try:
         return float(value)
@@ -292,6 +376,66 @@ def _limit_text(value: str, *, max_chars: int = 220) -> str:
     if len(text) <= max_chars:
         return text
     return f"{text[: max_chars - 1].rstrip()}..."
+
+
+def _clean_text(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _clean_text_list(values: Any, *, limit: int | None = None, max_chars: int = 160) -> list[str]:
+    cleaned: list[str] = []
+    ignored_markers = {"none", "n/a", "na", "null", "无", "暂无", "没有", "无问题"}
+    for entry in values or []:
+        text = _clean_text(entry)
+        if not text:
+            continue
+        if text.casefold() in ignored_markers:
+            continue
+        cleaned.append(_limit_text(text, max_chars=max_chars))
+    if limit is None:
+        return cleaned
+    return cleaned[:limit]
+
+
+def _safe_int_list(values: Any, *, limit: int | None = None) -> list[int]:
+    cleaned: list[int] = []
+    for entry in values or []:
+        try:
+            cleaned.append(int(entry))
+        except (TypeError, ValueError):
+            continue
+    if limit is None:
+        return cleaned
+    return cleaned[:limit]
+
+
+def _build_story_draft_scenes(playwright_output: Any) -> list[dict[str, Any]]:
+    draft_scenes: list[dict[str, Any]] = []
+    for fallback_index, scene_payload in enumerate(playwright_output or [], start=1):
+        if not isinstance(scene_payload, dict):
+            continue
+        script_payload = scene_payload.get("script") or {}
+        continuity_items = []
+        for item in script_payload.get("continuity_items", [])[:4]:
+            if not isinstance(item, dict):
+                continue
+            continuity_items.append(
+                {
+                    "label": _clean_text(item.get("label") or item.get("item_key")),
+                    "description": _limit_text(_clean_text(item.get("description")), max_chars=120),
+                    "carry_state": _clean_text(item.get("carry_state")),
+                }
+            )
+        draft_scenes.append(
+            {
+                "scene_index": int(scene_payload.get("scene_index") or fallback_index),
+                "target_word_in_scene": _clean_text(scene_payload.get("target_word_in_scene")),
+                "plot_description": _clean_text(script_payload.get("plot_description")),
+                "voiceover_and_dialogue": _clean_text(script_payload.get("voiceover_and_dialogue")),
+                "continuity_items": continuity_items,
+            }
+        )
+    return draft_scenes
 
 
 def _sanitize_target_word_spec(spec: dict[str, Any]) -> dict[str, Any]:
@@ -504,7 +648,12 @@ def _infer_render_profile(
     return "full_video"
 
 
-def _build_storybook_review_cards(scenes: list[dict[str, Any]], *, project_id: str) -> list[dict[str, Any]]:
+def _build_storybook_review_cards(
+    scenes: list[dict[str, Any]],
+    *,
+    project_id: str,
+    project_root: Path,
+) -> list[dict[str, Any]]:
     cards: list[dict[str, Any]] = []
     for scene in scenes:
         spoken_text = str((scene.get("audio") or {}).get("spoken_text", "")).strip() or str(
@@ -518,7 +667,17 @@ def _build_storybook_review_cards(scenes: list[dict[str, Any]], *, project_id: s
                 "scene_index": scene.get("scene_index"),
                 "target_word": target_word,
                 "selected_sense_label": target_word_spec.get("selected_sense_label"),
-                "image_url": (scene.get("visual") or {}).get("keyframe_image_url"),
+                "image_url": _resolve_scene_image_url(
+                    project_root,
+                    project_id,
+                    scene_index=scene.get("scene_index"),
+                    preferred_iterations=[
+                        (scene.get("visual") or {}).get("selected_iteration"),
+                        (scene.get("visual") or {}).get("approved_iteration"),
+                        ((scene.get("visual") or {}).get("review") or {}).get("iteration"),
+                    ],
+                    fallback_url=(scene.get("visual") or {}).get("keyframe_image_url"),
+                ),
                 "spoken_text": spoken_text,
                 "cloze_text": mask_target_words(spoken_text, [target_word]) if spoken_text and target_word else spoken_text,
                 "scene_video_url": (
@@ -652,7 +811,11 @@ def _build_study_package_payload(settings: VocavisionSettings, project_id: str) 
     state_payload = _load_project_state_payload(settings, safe_project_id)
     learning_plan = state_payload.get("learning_plan") or {}
     run_settings = _build_run_settings_payload(state_payload.get("run_settings"))
-    storybook_review = _build_storybook_review_cards(state_payload.get("scenes", []), project_id=safe_project_id)
+    storybook_review = _build_storybook_review_cards(
+        state_payload.get("scenes", []),
+        project_id=safe_project_id,
+        project_root=project_root,
+    )
     return {
         "package_id": safe_project_id,
         "title": " / ".join([str(word) for word in state_payload.get("target_words", [])]) or safe_project_id,
@@ -840,10 +1003,12 @@ def _build_story_review_panel(iterations: list[dict[str, Any]]) -> dict[str, Any
         review = item.get("review") or {}
         validation_issue = str(item.get("validation_error") or "").strip()
         accepted = bool(item.get("accepted"))
+        draft_scenes = _build_story_draft_scenes(item.get("playwright_output"))
         if accepted:
             accepted_iteration = int(item.get("iteration", 0) or 0)
         rounds.append(
             {
+                "timestamp": item.get("timestamp"),
                 "iteration": int(item.get("iteration", 0) or 0),
                 "accepted": accepted,
                 "passed": bool(review.get("passed")),
@@ -851,9 +1016,12 @@ def _build_story_review_panel(iterations: list[dict[str, Any]]) -> dict[str, Any
                 "summary": str(
                     review.get("feedback") or validation_issue or "The story is being revised to make the teaching clearer."
                 ).strip(),
-                "strengths": [str(entry).strip() for entry in review.get("strengths", [])[:3]],
-                "improvement_focus": [str(entry).strip() for entry in review.get("improvement_focus", [])[:3]],
+                "feedback_used": _limit_text(_clean_text(item.get("feedback_used") or "none"), max_chars=220),
+                "strengths": _clean_text_list(review.get("strengths"), limit=3),
+                "improvement_focus": _clean_text_list(review.get("improvement_focus"), limit=3),
                 "validation_issue": validation_issue.strip() if validation_issue else "",
+                "scene_count": len(draft_scenes),
+                "draft_scenes": draft_scenes,
             }
         )
     return {
@@ -866,6 +1034,9 @@ def _build_story_review_panel(iterations: list[dict[str, Any]]) -> dict[str, Any
 def _build_visual_review_panel(
     visual_iterations: list[dict[str, Any]],
     scene_summaries: list[dict[str, Any]],
+    *,
+    project_root: Path,
+    project_id: str,
 ) -> list[dict[str, Any]]:
     scene_lookup = {int(scene["scene_index"]): scene for scene in scene_summaries if scene.get("scene_index") is not None}
     grouped: dict[int, list[dict[str, Any]]] = {}
@@ -882,6 +1053,7 @@ def _build_visual_review_panel(
             director_feedback = review.get("director_feedback") or {}
             rounds.append(
                 {
+                    "timestamp": item.get("timestamp"),
                     "iteration": int(item.get("iteration", 0) or 0),
                     "approved": bool(item.get("approved")),
                     "score": _safe_float(review.get("score")),
@@ -891,8 +1063,27 @@ def _build_visual_review_panel(
                         or director_feedback.get("summary")
                         or "The image is being adjusted to match the teaching scene."
                     ).strip(),
-                    "visual_issues": [str(entry).strip() for entry in director_feedback.get("visual_issues", [])[:3]],
-                    "suggestions": [str(entry).strip() for entry in director_feedback.get("optimization_suggestions", [])[:3]],
+                    "image_url": _resolve_scene_image_url(
+                        project_root,
+                        project_id,
+                        scene_index=scene_index,
+                        iteration=item.get("iteration"),
+                        fallback_url=_clean_text(item.get("image_url")) or None,
+                    ),
+                    "visual_issues": _clean_text_list(director_feedback.get("visual_issues"), limit=3),
+                    "suggestions": _clean_text_list(director_feedback.get("optimization_suggestions"), limit=3),
+                    "prompt_adjustments": _clean_text_list(
+                        director_feedback.get("recommended_prompt_adjustments"),
+                        limit=3,
+                    ),
+                    "repair_instruction": _clean_text(director_feedback.get("repair_instruction")),
+                    "regeneration_mode": _clean_text(review.get("regeneration_mode")),
+                    "revised_plot_description": _clean_text(review.get("revised_plot_description")),
+                    "revised_voiceover_and_dialogue": _clean_text(review.get("revised_voiceover_and_dialogue")),
+                    "has_visible_target_word_text": bool(review.get("has_visible_target_word_text")),
+                    "observed_text": _clean_text(review.get("observed_text")),
+                    "text_legibility_passed": review.get("text_legibility_passed"),
+                    "text_legibility_reason": _clean_text(review.get("text_legibility_reason")),
                 }
             )
         panel_items.append(
@@ -903,6 +1094,7 @@ def _build_visual_review_panel(
                 "selected_iteration": scene_summary.get("selected_iteration"),
                 "selected_via_fallback": bool(scene_summary.get("selected_via_fallback")),
                 "visual_score": scene_summary.get("visual_score"),
+                "final_image_url": scene_summary.get("keyframe_image_url"),
                 "rounds": rounds,
             }
         )
@@ -913,16 +1105,65 @@ def _build_global_review_panel(global_visual_iterations: list[dict[str, Any]]) -
     rounds: list[dict[str, Any]] = []
     for item in global_visual_iterations:
         review = item.get("review") or {}
+        scene_feedback_payload = review.get("scene_feedback") or {}
+        scene_script_feedback_payload = review.get("scene_script_feedback") or {}
+        scene_feedback = []
+        for raw_scene_index, feedback_payload in scene_feedback_payload.items():
+            try:
+                scene_index = int(raw_scene_index)
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(feedback_payload, dict):
+                continue
+            scene_feedback.append(
+                {
+                    "scene_index": scene_index,
+                    "summary": _clean_text(feedback_payload.get("summary")),
+                    "visual_issues": _clean_text_list(feedback_payload.get("visual_issues"), limit=3),
+                    "suggestions": _clean_text_list(feedback_payload.get("optimization_suggestions"), limit=3),
+                    "prompt_adjustments": _clean_text_list(
+                        feedback_payload.get("recommended_prompt_adjustments"),
+                        limit=3,
+                    ),
+                    "repair_instruction": _clean_text(feedback_payload.get("repair_instruction")),
+                }
+            )
+        scene_feedback.sort(key=lambda entry: entry["scene_index"])
+        scene_script_feedback = []
+        for raw_scene_index, feedback_payload in scene_script_feedback_payload.items():
+            try:
+                scene_index = int(raw_scene_index)
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(feedback_payload, dict):
+                continue
+            scene_script_feedback.append(
+                {
+                    "scene_index": scene_index,
+                    "summary": _clean_text(feedback_payload.get("summary")),
+                    "script_issues": _clean_text_list(feedback_payload.get("script_issues"), limit=3),
+                    "revised_plot_description": _clean_text(feedback_payload.get("revised_plot_description")),
+                    "revised_voiceover_and_dialogue": _clean_text(
+                        feedback_payload.get("revised_voiceover_and_dialogue")
+                    ),
+                }
+            )
+        scene_script_feedback.sort(key=lambda entry: entry["scene_index"])
         rounds.append(
             {
+                "timestamp": item.get("timestamp"),
                 "iteration": int(item.get("iteration", 0) or 0),
                 "passed": bool(review.get("passed")),
                 "score": _safe_float(review.get("score")),
                 "summary": str(
                     review.get("feedback") or "The system is checking whether the full set of scenes feels consistent."
                 ).strip(),
-                "problem_scenes": [int(entry) for entry in review.get("problem_scenes", [])[:6]],
-                "style_adjustments": [str(entry).strip() for entry in review.get("global_style_adjustments", [])[:4]],
+                "problem_scenes": _safe_int_list(review.get("problem_scenes"), limit=6),
+                "style_adjustments": _clean_text_list(review.get("global_style_adjustments"), limit=4),
+                "blocking_issues": _clean_text_list(review.get("blocking_issues"), limit=4),
+                "targeted_scene_indexes": _safe_int_list(item.get("targeted_scene_indexes"), limit=6),
+                "scene_feedback": scene_feedback,
+                "scene_script_feedback": scene_script_feedback,
             }
         )
     return {
@@ -950,9 +1191,23 @@ def _collect_project_snapshot(settings: VocavisionSettings, project_id: str, job
     target_word_specs: list[dict[str, Any]] = []
     if state_payload is not None:
         scene_summaries = [_build_scene_summary(scene) for scene in state_payload.get("scenes", [])]
+        for scene_summary in scene_summaries:
+            scene_summary["keyframe_image_url"] = _resolve_scene_image_url(
+                workspace_root,
+                project_id,
+                scene_index=scene_summary.get("scene_index"),
+                preferred_iterations=[
+                    scene_summary.get("selected_iteration"),
+                ],
+                fallback_url=scene_summary.get("keyframe_image_url"),
+            )
         target_word_specs = [_sanitize_target_word_spec(spec) for spec in state_payload.get("target_word_specs", [])]
     storybook_review = (
-        _build_storybook_review_cards(state_payload.get("scenes", []), project_id=project_id)
+        _build_storybook_review_cards(
+            state_payload.get("scenes", []),
+            project_id=project_id,
+            project_root=workspace_root,
+        )
         if state_payload is not None
         else []
     )
@@ -983,12 +1238,17 @@ def _collect_project_snapshot(settings: VocavisionSettings, project_id: str, job
         "target_word_specs": target_word_specs,
         "related_word_family": _build_related_word_family(target_word_specs),
         "story_review_panel": _build_story_review_panel(story_iterations),
-        "visual_review_panel": _build_visual_review_panel(visual_iterations, scene_summaries),
+        "visual_review_panel": _build_visual_review_panel(
+            visual_iterations,
+            scene_summaries,
+            project_root=workspace_root,
+            project_id=project_id,
+        ),
         "global_review_panel": _build_global_review_panel(global_visual_iterations),
     }
 
 
-def _list_recent_projects(settings: VocavisionSettings, *, limit: int = 10) -> list[dict[str, Any]]:
+def _list_recent_projects(settings: VocavisionSettings, *, limit: int | None = 10) -> list[dict[str, Any]]:
     workspace_root = Path(settings.workspace_root)
     if not workspace_root.exists():
         return []
@@ -1025,7 +1285,10 @@ def _list_recent_projects(settings: VocavisionSettings, *, limit: int = 10) -> l
             )
         )
     project_entries.sort(key=lambda item: item[0], reverse=True)
-    return [payload for _, payload in project_entries[:limit]]
+    payloads = [payload for _, payload in project_entries]
+    if limit is None:
+        return payloads
+    return payloads[:limit]
 
 
 class SenseSuggestionRequest(BaseModel):
@@ -1270,7 +1533,7 @@ def create_app() -> FastAPI:
         settings = VocavisionSettings.from_env()
         return {
             "environment": validate_environment(settings),
-            "recent_projects": _list_recent_projects(settings),
+            "recent_projects": _list_recent_projects(settings, limit=None),
         }
 
     @app.get("/api/study/packages")
@@ -1501,7 +1764,7 @@ def create_app() -> FastAPI:
     def list_projects(request: Request) -> dict[str, Any]:
         _require_researcher_access(request)
         settings = VocavisionSettings.from_env()
-        return {"projects": _list_recent_projects(settings)}
+        return {"projects": _list_recent_projects(settings, limit=None)}
 
     @app.get("/api/projects/{project_id}/artifacts/{artifact_name}")
     def get_artifact(project_id: str, artifact_name: str, request: Request) -> FileResponse:
@@ -1514,6 +1777,29 @@ def create_app() -> FastAPI:
         file_path = Path(settings.workspace_root) / project_id / folder / filename
         if not file_path.exists():
             raise HTTPException(status_code=404, detail="Artifact not found.")
+        return FileResponse(file_path)
+
+    @app.get("/api/projects/{project_id}/scenes/{scene_index}/keyframe")
+    def get_scene_keyframe(project_id: str, scene_index: int) -> FileResponse:
+        settings = VocavisionSettings.from_env()
+        file_path = _resolve_local_keyframe_path(
+            Path(settings.workspace_root) / project_id,
+            scene_index,
+        )
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="Scene keyframe not found.")
+        return FileResponse(file_path)
+
+    @app.get("/api/projects/{project_id}/scenes/{scene_index}/keyframes/{iteration}")
+    def get_scene_keyframe_iteration(project_id: str, scene_index: int, iteration: int) -> FileResponse:
+        settings = VocavisionSettings.from_env()
+        file_path = _resolve_local_keyframe_path(
+            Path(settings.workspace_root) / project_id,
+            scene_index,
+            iteration=iteration,
+        )
+        if not file_path.exists():
+            raise HTTPException(status_code=404, detail="Scene keyframe iteration not found.")
         return FileResponse(file_path)
 
     @app.get("/api/projects/{project_id}/scenes/{scene_index}/{variant}")

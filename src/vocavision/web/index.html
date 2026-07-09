@@ -11,13 +11,7 @@
       <header class="hero-card">
         <div class="hero-copy">
           <p class="eyebrow">VocaVision Story Video Studio</p>
-          <h1>把单词做成会讲故事的学习短片 / Story-Driven Vocabulary Videos</h1>
-          <p class="hero-description">
-            从词义确认到故事成片，VocaVision
-            会把教学目标、视觉表现和视频交付串成一条可追踪的创作流程。 / From
-            sense review to final delivery, VocaVision keeps the learning goal,
-            visuals, and video output aligned in one trackable workflow.
-          </p>
+          <h1>词汇教学视频工作台 / Video Creation Studio</h1>
           <div class="hero-points">
             <span class="hero-pill">先确认义项 / Review Meaning First</span>
             <span class="hero-pill">再生成故事 / Build Story Next</span>
@@ -50,10 +44,7 @@
                 <p class="section-kicker">Step 1</p>
                 <h2>创作设定 / Project Setup</h2>
                 <p class="section-helper">
-                  先定义项目
-                  ID、目标词和运行配置。建议先用测试模式验证故事与视觉方向。 /
-                  Set the project ID, target words, and run options first. Test
-                  mode is the safest way to validate story and visual direction.
+                  输入目标词并设置运行方式。 / Set words and run options.
                 </p>
               </div>
               <span class="section-tag">输入与配置 / Setup</span>
@@ -167,10 +158,6 @@
                   step="0.1"
                   placeholder="默认 8.0 / Default 8.0"
                 />
-                <small class="input-helper">
-                  用于故事脚本评审，不直接决定单张 scene 图片是否通过。 /
-                  Applies to story review, not individual scene-image approval.
-                </small>
               </label>
               <label>
                 <span class="field-label"
@@ -185,11 +172,6 @@
                   step="0.1"
                   placeholder="默认 8.0 / Default 8.0"
                 />
-                <small class="input-helper">
-                  用于整组 scene 的全局一致性复审，不直接拦截单个 scene
-                  的首轮图片。 / Applies to full-project consistency review, not
-                  a single scene's first-pass image.
-                </small>
               </label>
             </div>
 
@@ -213,9 +195,7 @@
                 <p class="section-kicker">Step 2</p>
                 <h2>义项确认 / Sense Check</h2>
                 <p class="section-helper">
-                  系统会先给出推荐义项，你可以直接采用，也可以切换到更适合教学画面的候选。
-                  / The system suggests a preferred sense first, and you can
-                  keep it or switch to a more teachable visual interpretation.
+                  确认每个词要教的具体义项。 / Confirm the sense for each word.
                 </p>
               </div>
               <span class="section-tag">系统先猜 / System Suggests First</span>
@@ -228,11 +208,6 @@
 
             <div class="log-heading review-title related-family-heading">
               <h3>扩展词预览 / Related Word Family</h3>
-              <p class="review-intro">
-                当模式会把单个种子词扩展成词汇家族时，这里会提前展示系统补出的相关词。
-                / When one seed word expands into a word family, the system will
-                preview the added related words here.
-              </p>
             </div>
             <div id="related-word-family" class="stack-list empty-state">
               如果当前模式会自动扩词，这里会显示原词和系统扩展词。 / If the
@@ -272,9 +247,8 @@
                 <p class="section-kicker">Step 3</p>
                 <h2>制作进度 / Production Progress</h2>
                 <p class="section-helper">
-                  查看故事、视觉和媒体生成的当前阶段，必要时打开项目资料继续排查。
-                  / Track the story, visual, and media stages, then open project
-                  files whenever you need deeper diagnostics.
+                  跟踪阶段状态，并查看每轮迭代。 / Track stages and inspect each
+                  iteration.
                 </p>
               </div>
               <span id="job-badge" class="section-tag muted-tag"
@@ -305,17 +279,6 @@
             </div>
 
             <section class="review-section">
-              <div class="log-heading review-title">
-                <h3>项目资料 / Project Files</h3>
-              </div>
-              <div id="project-files" class="artifact-grid empty-state">
-                当前项目的状态快照、事件日志和迭代记录会显示在这里。 / State
-                snapshots, event logs, and iteration records for the current
-                project will appear here.
-              </div>
-            </section>
-
-            <section class="review-section">
               <div class="log-heading">
                 <h3>过程播报 / Progress Feed</h3>
                 <button id="refresh-button" class="ghost-button">
@@ -330,12 +293,6 @@
             <section class="review-section">
               <div class="log-heading review-title">
                 <h3>复盘面板 / Review Panels</h3>
-                <p class="review-intro">
-                  把故事、关键帧和全局一致性审查集中在一起，方便你判断内容是否真的能教会用户。
-                  / Review story, keyframe, and global consistency decisions
-                  together to judge whether the output truly teaches the word
-                  well.
-                </p>
               </div>
               <div id="review-panels" class="accordion-stack empty-state">
                 运行后，这里会生成故事迭代、视觉迭代和全局一致性复盘。 / Story,
@@ -351,9 +308,8 @@
                 <p class="section-kicker">Step 4</p>
                 <h2>成片预览 / Final Preview</h2>
                 <p class="section-helper">
-                  这里优先展示最终视频和交付入口，适合用来做演示、复核和导出。 /
-                  This area prioritizes the final video and delivery links for
-                  demos, review, and export.
+                  查看最终视频与交付文件。 / Preview the final video and
+                  outputs.
                 </p>
               </div>
               <span class="section-tag">交付结果 / Delivery</span>
@@ -378,31 +334,9 @@
               controls
             ></video>
 
-            <div id="artifact-links" class="artifact-grid"></div>
-
-            <section class="review-section">
-              <div class="log-heading review-title">
-                <h3>学习结果摘要 / Learning Summary</h3>
-                <p class="review-intro">
-                  做完练习后，这里会统计正确率，并提示哪些词和哪些 scene
-                  值得重新回看。 / After you answer the review questions, this
-                  section highlights your score and what to revisit.
-                </p>
-              </div>
-              <div id="learning-summary" class="summary-grid empty-state">
-                完成几道题后，这里会生成学习结果摘要。 / Answer a few questions
-                to unlock the learning summary.
-              </div>
-            </section>
-
             <section class="review-section">
               <div class="log-heading review-title">
                 <h3>挖空复习 / Cloze Challenge</h3>
-                <p class="review-intro">
-                  用同一段视频再看一遍，但把关键词挖空，然后直接做选择题复习。 /
-                  Replay the same video with missing keywords, then answer quick
-                  review choices.
-                </p>
               </div>
               <video
                 id="cloze-video-preview"
@@ -418,10 +352,6 @@
             <section class="review-section">
               <div class="log-heading review-title">
                 <h3>绘本复习 / Storybook Review</h3>
-                <p class="review-intro">
-                  逐帧回看关键帧和字幕，帮助用户像翻绘本一样复习故事与词义。 /
-                  Review each keyframe and subtitle like a picture book.
-                </p>
               </div>
               <div id="storybook-review" class="storybook-grid empty-state">
                 关键帧与字幕复习卡会在这里出现。 / Keyframe review cards will
@@ -454,15 +384,20 @@
             <section class="review-section">
               <div class="log-heading review-title">
                 <h3>教学练习 / Practice Quiz</h3>
-                <p class="review-intro">
-                  看完视频后，继续做几道词汇题，检查是否真的理解并记住了词义。 /
-                  Keep practicing after the video to confirm retention and
-                  understanding.
-                </p>
               </div>
               <div id="practice-quiz" class="quiz-grid empty-state">
                 教学练习题会在这里出现。 / Post-video practice questions will
                 appear here.
+              </div>
+            </section>
+
+            <section class="review-section">
+              <div class="log-heading review-title">
+                <h3>学习结果摘要 / Learning Summary</h3>
+              </div>
+              <div id="learning-summary" class="summary-grid empty-state">
+                完成几道题后，这里会生成学习结果摘要。 / Answer a few questions
+                to unlock the learning summary.
               </div>
             </section>
           </section>
@@ -473,9 +408,7 @@
               <p class="section-kicker">Library</p>
               <h2>项目库 / Project Library</h2>
               <p class="section-helper">
-                重新打开已有项目、查看当前状态，并直接回到对应的成片或运行资料。
-                / Reopen past projects, inspect their latest state, and jump
-                back to outputs or logs.
+                快速回到已有项目。 / Reopen recent projects.
               </p>
             </div>
             <span class="section-tag">最近项目 / Recent</span>

@@ -56,7 +56,6 @@ const elements = {
   activeStage: document.getElementById("active-stage"),
   activeSceneCount: document.getElementById("active-scene-count"),
   sceneSummary: document.getElementById("scene-summary"),
-  projectFiles: document.getElementById("project-files"),
   eventLog: document.getElementById("event-log"),
   reviewPanels: document.getElementById("review-panels"),
   resultSummary: document.getElementById("result-summary"),
@@ -70,7 +69,6 @@ const elements = {
   storybookPlayerTitle: document.getElementById("storybook-player-title"),
   storybookPlayerCaption: document.getElementById("storybook-player-caption"),
   practiceQuiz: document.getElementById("practice-quiz"),
-  artifactLinks: document.getElementById("artifact-links"),
   senseTemplate: document.getElementById("sense-card-template"),
 };
 
@@ -86,20 +84,6 @@ const STAGE_LABELS = {
 };
 
 const ARTIFACT_METADATA = {
-  final_video: {
-    title: bi("查看最终视频", "Open Final Video"),
-    description: bi(
-      "适合预览、下载和演示",
-      "Preview, download, and demo ready",
-    ),
-  },
-  final_cloze_video: {
-    title: bi("查看挖空复习视频", "Open Cloze Review Video"),
-    description: bi(
-      "同一条视频，只把关键词字幕挖空",
-      "Same video, but with the key subtitle blanked out",
-    ),
-  },
   state: {
     title: bi("查看项目状态", "Open Project State"),
     description: bi(
@@ -688,7 +672,9 @@ function renderSenseCards(specs) {
 }
 
 function formatRelationLabel(relation) {
-  const normalized = String(relation || "").trim().toLowerCase();
+  const normalized = String(relation || "")
+    .trim()
+    .toLowerCase();
   if (normalized === "seed_word") {
     return bi("原始词", "Seed");
   }
@@ -849,6 +835,513 @@ function renderProgressFeed(feed) {
     .join("");
 }
 
+function renderMiniChips(items, tone = "") {
+  if (!items || !items.length) {
+    return "";
+  }
+  return items
+    .map(
+      (item) =>
+        `<span class="mini-chip${tone ? ` ${tone}` : ""}">${escapeHtml(item)}</span>`,
+    )
+    .join("");
+}
+
+function renderInsightRow(title, items, tone = "") {
+  if (!items || !items.length) {
+    return "";
+  }
+  return `
+    <div class="insight-row">
+      <span class="detail-label">${escapeHtml(title)}</span>
+      <div class="chip-flow">${renderMiniChips(items, tone)}</div>
+    </div>
+  `;
+}
+
+function renderCopyBlock(title, text, emptyText = bi("暂无", "Not available")) {
+  return `
+    <section class="copy-block">
+      <span class="detail-label">${escapeHtml(title)}</span>
+      <p>${escapeHtml(text || emptyText)}</p>
+    </section>
+  `;
+}
+
+function renderImageFrame(imageUrl, altText, placeholderText) {
+  if (imageUrl) {
+    return `<img
+      class="iteration-image"
+      src="${escapeHtml(imageUrl)}"
+      alt="${escapeHtml(altText)}"
+      data-image-fallback="${escapeHtml(placeholderText)}"
+      data-fallback-class="iteration-image placeholder"
+    />`;
+  }
+  return `<div class="iteration-image placeholder">${escapeHtml(placeholderText)}</div>`;
+}
+
+function bindImageFallbacks(root) {
+  if (!root) {
+    return;
+  }
+  root.querySelectorAll("img[data-image-fallback]").forEach((image) => {
+    if (image.dataset.fallbackBound === "true") {
+      return;
+    }
+    image.dataset.fallbackBound = "true";
+    image.addEventListener(
+      "error",
+      () => {
+        const fallback = document.createElement("div");
+        fallback.className =
+          image.getAttribute("data-fallback-class") || "iteration-image placeholder";
+        fallback.textContent =
+          image.getAttribute("data-image-fallback") ||
+          bi("图片暂时不可用。", "Image is not available.");
+        fallback.setAttribute("aria-label", image.getAttribute("alt") || "");
+        image.replaceWith(fallback);
+      },
+      { once: true },
+    );
+  });
+}
+
+function renderStoryDraftScenes(round) {
+  if (!round.draft_scenes || !round.draft_scenes.length) {
+    return `
+      <p class="empty-inline">
+        ${bi("这一轮还没有可展示的剧本草稿。", "No story draft is available for this round.")}
+      </p>
+    `;
+  }
+  return `
+    <div class="draft-scene-grid">
+      ${round.draft_scenes
+        .map(
+          (scene) => `
+            <article class="draft-scene-card">
+              <div class="draft-scene-head">
+                <strong>Scene ${scene.scene_index}</strong>
+                <span class="mini-chip accent">${escapeHtml(scene.target_word_in_scene || bi("未标注目标词", "No target word"))}</span>
+              </div>
+              ${renderCopyBlock(
+                bi("画面脚本", "Visual beat"),
+                scene.plot_description,
+                bi(
+                  "这一轮没有填写画面描述。",
+                  "No visual beat for this round.",
+                ),
+              )}
+              ${renderCopyBlock(
+                bi("旁白文案", "Narration"),
+                scene.voiceover_and_dialogue,
+                bi("这一轮没有填写旁白。", "No narration for this round."),
+              )}
+              ${
+                scene.continuity_items?.length
+                  ? `
+                    <div class="insight-row">
+                      <span class="detail-label">${bi("连续性约束", "Continuity")}</span>
+                      <div class="continuity-list">
+                        ${scene.continuity_items
+                          .map(
+                            (item) => `
+                              <article class="continuity-item">
+                                <strong>${escapeHtml(item.label || bi("未命名元素", "Unnamed item"))}</strong>
+                                <span>${escapeHtml(item.description || bi("未写描述", "No description"))}</span>
+                                ${
+                                  item.carry_state
+                                    ? `<span>${bi("状态", "State")}: ${escapeHtml(item.carry_state)}</span>`
+                                    : ""
+                                }
+                              </article>
+                            `,
+                          )
+                          .join("")}
+                      </div>
+                    </div>
+                  `
+                  : ""
+              }
+            </article>
+          `,
+        )
+        .join("")}
+    </div>
+  `;
+}
+
+function renderStoryRound(round) {
+  const reviewTone = round.accepted
+    ? "success"
+    : round.passed
+      ? "accent"
+      : "warning";
+  const feedbackUsed =
+    round.feedback_used && round.feedback_used !== "none"
+      ? round.feedback_used
+      : bi(
+          "首轮草稿，没有沿用上一轮反馈。",
+          "First draft with no prior feedback.",
+        );
+  return `
+    <article class="iteration-card">
+      <div class="iteration-card-head">
+        <div>
+          <strong>${bi(`第 ${round.iteration} 轮剧本`, `Story Round ${round.iteration}`)}</strong>
+          <span>${bi("评分", "Score")}: ${formatScore(round.score)}${round.timestamp ? ` · ${formatDateTime(round.timestamp)}` : ""}</span>
+        </div>
+        <div class="chip-flow">
+          <span class="mini-chip ${reviewTone}">${round.accepted ? bi("最终采用", "Accepted") : round.passed ? bi("通过待选", "Passed") : bi("继续修改", "Revise")}</span>
+          <span class="mini-chip">${bi("场景数", "Scenes")}: ${round.scene_count || 0}</span>
+        </div>
+      </div>
+      <div class="comparison-grid">
+        <div class="comparison-card">
+          <span class="detail-label">${bi("本轮结论", "Round Summary")}</span>
+          <p>${escapeHtml(round.summary || bi("暂无总结。", "No summary yet."))}</p>
+        </div>
+        <div class="comparison-card">
+          <span class="detail-label">${bi("本轮依据", "Feedback Used")}</span>
+          <p>${escapeHtml(feedbackUsed)}</p>
+        </div>
+      </div>
+      ${renderInsightRow(bi("优点", "Strengths"), round.strengths, "success")}
+      ${renderInsightRow(bi("下一轮重点", "Next Focus"), round.improvement_focus, "warning")}
+      ${
+        round.validation_issue
+          ? `<div class="comparison-card warning-surface">${renderCopyBlock(
+              bi("本地校验提醒", "Validation Note"),
+              round.validation_issue,
+            )}</div>`
+          : ""
+      }
+      ${renderStoryDraftScenes(round)}
+    </article>
+  `;
+}
+
+function renderVisualRound(round, sceneIndex) {
+  const legibilityStatus =
+    round.text_legibility_passed === true
+      ? bi("文字通过", "Text passed")
+      : round.text_legibility_passed === false
+        ? bi("文字需修复", "Text needs repair")
+        : "";
+  return `
+    <article class="iteration-card visual-iteration-card${round.approved ? " selected-iteration-card" : ""}">
+      <div class="iteration-card-head">
+        <div>
+          <strong>${bi(`第 ${round.iteration} 轮画面`, `Visual Round ${round.iteration}`)}</strong>
+          <span>${bi("评分", "Score")}: ${formatScore(round.score)} | ${bi("匹配度", "Match")}: ${escapeHtml(round.match_level || "-")}</span>
+        </div>
+        <div class="chip-flow">
+          <span class="mini-chip ${round.approved ? "success" : "warning"}">${round.approved ? bi("本轮通过", "Approved") : bi("继续返修", "Needs fix")}</span>
+          ${
+            round.regeneration_mode
+              ? `<span class="mini-chip">${escapeHtml(round.regeneration_mode)}</span>`
+              : ""
+          }
+          ${
+            legibilityStatus
+              ? `<span class="mini-chip">${escapeHtml(legibilityStatus)}</span>`
+              : ""
+          }
+        </div>
+      </div>
+      <div class="visual-round-layout">
+        <div class="iteration-media-frame">
+          ${renderImageFrame(
+            round.image_url,
+            `Scene ${sceneIndex} round ${round.iteration}`,
+            bi("这一轮没有保存图片。", "No image saved for this round."),
+          )}
+        </div>
+        <div class="iteration-copy">
+          ${renderCopyBlock(
+            bi("为什么改", "Why it changed"),
+            round.summary,
+            bi("暂无说明。", "No explanation."),
+          )}
+          ${
+            round.text_legibility_reason
+              ? renderCopyBlock(
+                  bi("文字检查", "Text check"),
+                  round.text_legibility_reason,
+                )
+              : ""
+          }
+          ${
+            round.observed_text
+              ? renderCopyBlock(
+                  bi("图中识别到的文字", "Observed text"),
+                  round.observed_text,
+                )
+              : ""
+          }
+        </div>
+      </div>
+      ${renderInsightRow(bi("主要问题", "Main issues"), round.visual_issues, "warning")}
+      ${renderInsightRow(bi("改进建议", "Suggestions"), round.suggestions, "accent")}
+      ${renderInsightRow(
+        bi("提示词调整方向", "Prompt adjustments"),
+        round.prompt_adjustments,
+      )}
+      ${
+        round.repair_instruction
+          ? `<div class="comparison-card">${renderCopyBlock(
+              bi("修复指令", "Repair instruction"),
+              round.repair_instruction,
+            )}</div>`
+          : ""
+      }
+      <div class="comparison-grid">
+        ${renderCopyBlock(
+          bi("调整后画面描述", "Updated visual beat"),
+          round.revised_plot_description,
+          bi("暂无更新后的画面描述。", "No updated visual beat."),
+        )}
+        ${renderCopyBlock(
+          bi("调整后旁白", "Updated narration"),
+          round.revised_voiceover_and_dialogue,
+          bi("暂无更新后的旁白。", "No updated narration."),
+        )}
+      </div>
+    </article>
+  `;
+}
+
+function renderSceneReferencePreview(sceneIndex, sceneMeta, placeholderText) {
+  return `
+    <div class="global-scene-preview">
+      ${renderImageFrame(
+        sceneMeta?.imageUrl,
+        `Scene ${sceneIndex} reference image`,
+        placeholderText,
+      )}
+    </div>
+  `;
+}
+
+function collectFocusedSceneIndexes(round) {
+  const focused = new Set();
+  (round.problem_scenes || []).forEach((sceneIndex) => focused.add(sceneIndex));
+  (round.scene_feedback || []).forEach((item) => focused.add(item.scene_index));
+  (round.scene_script_feedback || []).forEach((item) =>
+    focused.add(item.scene_index),
+  );
+  return [...focused].sort((a, b) => a - b);
+}
+
+function buildGlobalFocusReasonMap(round) {
+  const reasons = new Map();
+  const appendReason = (sceneIndex, reason) => {
+    const existing = reasons.get(sceneIndex) || [];
+    if (!existing.includes(reason)) {
+      existing.push(reason);
+    }
+    reasons.set(sceneIndex, existing);
+  };
+  (round.problem_scenes || []).forEach((sceneIndex) =>
+    appendReason(sceneIndex, bi("全局评分标记", "Flagged by review")),
+  );
+  (round.scene_feedback || []).forEach((item) =>
+    appendReason(item.scene_index, bi("画面问题", "Visual issue")),
+  );
+  (round.scene_script_feedback || []).forEach((item) =>
+    appendReason(item.scene_index, bi("文案修订", "Script revision")),
+  );
+  return reasons;
+}
+
+function buildSceneFeedbackMap(items) {
+  return Object.fromEntries((items || []).map((item) => [item.scene_index, item]));
+}
+
+function renderGlobalSceneOverviewCard(sceneMeta, reasonLabels = [], visualFeedback = null) {
+  if (!sceneMeta) {
+    return "";
+  }
+  return `
+    <article class="global-overview-card${reasonLabels.length ? " focused" : ""}">
+      <div class="global-overview-media">
+        ${renderImageFrame(
+          sceneMeta.imageUrl,
+          `Scene ${sceneMeta.sceneIndex} overview image`,
+          bi("该场景还没有关键帧。", "No keyframe for this scene yet."),
+        )}
+      </div>
+      <div class="global-overview-copy">
+        <div class="draft-scene-head">
+          <strong>Scene ${sceneMeta.sceneIndex}</strong>
+          ${
+            sceneMeta.targetWord
+              ? `<span class="mini-chip accent">${escapeHtml(sceneMeta.targetWord)}</span>`
+              : ""
+          }
+        </div>
+        ${
+          reasonLabels.length
+            ? `<div class="chip-flow left-align">${renderMiniChips(
+                reasonLabels,
+                "warning",
+              )}</div>`
+            : ""
+        }
+        ${
+          visualFeedback
+            ? `
+              ${renderCopyBlock(
+                bi("问题摘要", "Summary"),
+                visualFeedback.summary,
+                bi("暂无摘要。", "No summary."),
+              )}
+              ${renderInsightRow(bi("问题", "Issues"), visualFeedback.visual_issues, "warning")}
+              ${renderInsightRow(bi("建议", "Suggestions"), visualFeedback.suggestions, "accent")}
+              ${renderInsightRow(
+                bi("提示词方向", "Prompt adjustments"),
+                visualFeedback.prompt_adjustments,
+              )}
+              ${
+                visualFeedback.repair_instruction
+                  ? renderCopyBlock(
+                      bi("修复指令", "Repair instruction"),
+                      visualFeedback.repair_instruction,
+                    )
+                  : ""
+              }
+            `
+            : ""
+        }
+      </div>
+    </article>
+  `;
+}
+
+function renderGlobalRound(round, sceneImageLookup) {
+  const allScenes = Object.values(sceneImageLookup).sort(
+    (left, right) => left.sceneIndex - right.sceneIndex,
+  );
+  const focusReasonMap = buildGlobalFocusReasonMap(round);
+  const sceneFeedbackMap = buildSceneFeedbackMap(round.scene_feedback);
+  const focusedSceneIndexes = collectFocusedSceneIndexes(round);
+  const focusedScenes = focusedSceneIndexes
+    .map((sceneIndex) => sceneImageLookup[sceneIndex])
+    .filter(Boolean);
+  return `
+    <article class="iteration-card">
+      <div class="iteration-card-head">
+        <div>
+          <strong>${bi(`第 ${round.iteration} 轮全局复审`, `Global Round ${round.iteration}`)}</strong>
+          <span>${bi("评分", "Score")}: ${formatScore(round.score)}${round.timestamp ? ` · ${formatDateTime(round.timestamp)}` : ""}</span>
+        </div>
+        <div class="chip-flow">
+          <span class="mini-chip ${round.passed ? "success" : "warning"}">${round.passed ? bi("全局通过", "Passed") : bi("还需统一", "Needs alignment")}</span>
+          ${
+            round.problem_scenes?.length
+              ? `<span class="mini-chip warning">${bi("问题场景", "Problem scenes")}: ${round.problem_scenes.join(", ")}</span>`
+              : ""
+          }
+          ${
+            round.targeted_scene_indexes?.length
+              ? `<span class="mini-chip">${bi("复审范围", "Reviewed scenes")}: ${round.targeted_scene_indexes.join(", ")}</span>`
+              : ""
+          }
+        </div>
+      </div>
+      <div class="comparison-card">
+        <span class="detail-label">${bi("复审结论", "Global Summary")}</span>
+        <p>${escapeHtml(round.summary || bi("暂无总结。", "No summary yet."))}</p>
+      </div>
+      ${
+        allScenes.length
+          ? `
+            <div class="subsection-block">
+              <span class="detail-label">${bi("全帧总览", "All Frames Overview")}</span>
+              <div class="global-overview-grid">
+                ${allScenes
+                  .map((sceneMeta) =>
+                    renderGlobalSceneOverviewCard(
+                      sceneMeta,
+                      focusReasonMap.get(sceneMeta.sceneIndex) || [],
+                    ),
+                  )
+                  .join("")}
+              </div>
+            </div>
+          `
+          : ""
+      }
+      ${
+        focusedScenes.length
+          ? `
+            <div class="subsection-block">
+              <span class="detail-label">${bi("重点关注帧", "Frames To Inspect")}</span>
+              <div class="global-overview-grid focused-grid">
+                ${focusedScenes
+                  .map((sceneMeta) =>
+                    renderGlobalSceneOverviewCard(
+                      sceneMeta,
+                      focusReasonMap.get(sceneMeta.sceneIndex) || [],
+                      sceneFeedbackMap[sceneMeta.sceneIndex] || null,
+                    ),
+                  )
+                  .join("")}
+              </div>
+            </div>
+          `
+          : ""
+      }
+      ${renderInsightRow(bi("整体调整建议", "Style adjustments"), round.style_adjustments, "accent")}
+      ${renderInsightRow(bi("阻塞问题", "Blocking issues"), round.blocking_issues, "warning")}
+      ${
+        round.scene_script_feedback?.length
+          ? `
+            <div class="subsection-block">
+              <span class="detail-label">${bi("逐场景文案修订", "Scene script revisions")}</span>
+              <div class="draft-scene-grid">
+                ${round.scene_script_feedback
+                  .map(
+                    (item) => `
+                      <article class="draft-scene-card">
+                        <div class="draft-scene-head">
+                          <strong>Scene ${item.scene_index}</strong>
+                        </div>
+                        ${renderSceneReferencePreview(
+                          item.scene_index,
+                          sceneImageLookup[item.scene_index],
+                          bi("该场景还没有关键帧。", "No keyframe for this scene yet."),
+                        )}
+                        ${renderCopyBlock(
+                          bi("文案问题", "Script summary"),
+                          item.summary,
+                          bi("暂无摘要。", "No summary."),
+                        )}
+                        ${renderInsightRow(bi("问题", "Issues"), item.script_issues, "warning")}
+                        ${renderCopyBlock(
+                          bi("建议画面描述", "Suggested visual beat"),
+                          item.revised_plot_description,
+                          bi("暂无建议。", "No suggestion."),
+                        )}
+                        ${renderCopyBlock(
+                          bi("建议旁白", "Suggested narration"),
+                          item.revised_voiceover_and_dialogue,
+                          bi("暂无建议。", "No suggestion."),
+                        )}
+                      </article>
+                    `,
+                  )
+                  .join("")}
+              </div>
+            </div>
+          `
+          : ""
+      }
+    </article>
+  `;
+}
+
 function renderReviewPanels(snapshot) {
   const storyPanel = snapshot.story_review_panel || { rounds: [] };
   const visualPanel = snapshot.visual_review_panel || [];
@@ -870,18 +1363,7 @@ function renderReviewPanels(snapshot) {
   }
 
   const storyRounds = (storyPanel.rounds || [])
-    .map(
-      (round) => `
-      <div class="sub-card">
-        <strong>${bi(`第 ${round.iteration} 轮`, `Round ${round.iteration}`)}${round.accepted ? ` · ${bi("已采用", "Accepted")}` : ""}</strong>
-        <span>${bi("评分", "Score")}: ${formatScore(round.score)} | ${round.passed ? bi("通过", "Passed") : bi("继续调整", "Needs revision")}</span>
-        <p>${round.summary}</p>
-        ${round.strengths?.length ? `<p><b>${bi("优点", "Strengths")}:</b> ${round.strengths.join(" / ")}</p>` : ""}
-        ${round.improvement_focus?.length ? `<p><b>${bi("改进重点", "Focus")}:</b> ${round.improvement_focus.join(" / ")}</p>` : ""}
-        ${round.validation_issue ? `<p><b>${bi("本地校验提醒", "Validation note")}:</b> ${round.validation_issue}</p>` : ""}
-      </div>
-    `,
-    )
+    .map((round) => renderStoryRound(round))
     .join("");
 
   const visualScenes = visualPanel
@@ -897,39 +1379,48 @@ function renderReviewPanels(snapshot) {
           <span>${bi("最终轮次", "Chosen round")}: ${scene.selected_iteration || 0} | ${bi("评分", "Score")}: ${formatScore(scene.visual_score)}</span>
         </summary>
         <div class="nested-content">
-          <p>${bi("对应义项", "Sense")}: ${scene.selected_sense_label || bi("默认", "Default")}</p>
-          ${scene.selected_via_fallback ? `<p>${bi("该场景采用了历史最佳关键帧作为回退结果。", "This scene used the best historical keyframe as fallback.")}</p>` : ""}
-          ${(scene.rounds || [])
-            .map(
-              (round) => `
-              <div class="sub-card">
-                <strong>${bi(`第 ${round.iteration} 轮`, `Round ${round.iteration}`)}${round.approved ? ` · ${bi("通过", "Approved")}` : ""}</strong>
-                <span>${bi("匹配程度", "Match level")}: ${round.match_level || "-"} | ${bi("评分", "Score")}: ${formatScore(round.score)}</span>
-                <p>${round.summary}</p>
-                ${round.visual_issues?.length ? `<p><b>${bi("主要问题", "Main issues")}:</b> ${round.visual_issues.join(" / ")}</p>` : ""}
-                ${round.suggestions?.length ? `<p><b>${bi("调整建议", "Suggestions")}:</b> ${round.suggestions.join(" / ")}</p>` : ""}
-              </div>
-            `,
-            )
-            .join("")}
+          <div class="scene-review-overview">
+            <div class="scene-review-copy">
+              <span class="detail-label">${bi("对应义项", "Sense")}</span>
+              <p>${escapeHtml(scene.selected_sense_label || bi("默认", "Default"))}</p>
+              ${
+                scene.selected_via_fallback
+                  ? `<p>${bi("最终采用的是历史最佳图像回退结果。", "The final image uses the best historical fallback result.")}</p>`
+                  : ""
+              }
+            </div>
+            <div class="scene-review-preview">
+              ${renderImageFrame(
+                scene.final_image_url,
+                `Scene ${scene.scene_index} final image`,
+                bi("还没有最终关键帧。", "Final keyframe not ready yet."),
+              )}
+            </div>
+          </div>
+          <div class="iteration-stack">
+            ${(scene.rounds || [])
+              .map((round) => renderVisualRound(round, scene.scene_index))
+              .join("")}
+          </div>
         </div>
       </details>
     `,
     )
     .join("");
 
+  const sceneImageLookup = Object.fromEntries(
+    visualPanel.map((scene) => [
+      scene.scene_index,
+      {
+        sceneIndex: scene.scene_index,
+        imageUrl: scene.final_image_url,
+        targetWord: scene.target_word_in_scene,
+      },
+    ]),
+  );
+
   const globalRounds = (globalPanel.rounds || [])
-    .map(
-      (round) => `
-      <div class="sub-card">
-        <strong>${bi(`第 ${round.iteration} 轮`, `Round ${round.iteration}`)}${round.passed ? ` · ${bi("通过", "Passed")}` : ""}</strong>
-        <span>${bi("评分", "Score")}: ${formatScore(round.score)}</span>
-        <p>${round.summary}</p>
-        ${round.problem_scenes?.length ? `<p><b>${bi("需要再看一眼的场景", "Scenes to revisit")}:</b> ${round.problem_scenes.map((item) => `Scene ${item}`).join(" / ")}</p>` : ""}
-        ${round.style_adjustments?.length ? `<p><b>${bi("整体调整建议", "Global adjustments")}:</b> ${round.style_adjustments.join(" / ")}</p>` : ""}
-      </div>
-    `,
-    )
+    .map((round) => renderGlobalRound(round, sceneImageLookup))
     .join("");
 
   elements.reviewPanels.className = "accordion-stack";
@@ -937,7 +1428,7 @@ function renderReviewPanels(snapshot) {
     <details
       class="accordion-card"
       data-review-panel="story"
-      ${getReviewPanelOpen("story", true) ? "open" : ""}
+      ${getReviewPanelOpen("story") ? "open" : ""}
     >
       <summary>
         <span>${bi("故事迭代复盘", "Story Iteration Review")}</span>
@@ -975,58 +1466,7 @@ function renderReviewPanels(snapshot) {
     </details>
   `;
   bindReviewPanelState();
-}
-
-function renderArtifacts(snapshot) {
-  const links = [
-    ["final_video", snapshot.final_video_url],
-    ["final_cloze_video", snapshot.final_cloze_video_url],
-  ].filter(([, url]) => Boolean(url));
-  if (!links.length) {
-    elements.artifactLinks.innerHTML = "";
-    return;
-  }
-  elements.artifactLinks.innerHTML = links
-    .map(([artifactName, url]) => {
-      const metadata = ARTIFACT_METADATA[artifactName];
-      return `
-        <a class="artifact-link" href="${url}" target="_blank" rel="noreferrer">
-          <strong>${metadata.title}</strong>
-          <span>${metadata.description}</span>
-        </a>
-      `;
-    })
-    .join("");
-}
-
-function renderProjectFiles(snapshot) {
-  const artifacts = snapshot.artifacts || {};
-  const logLinks = Object.entries(artifacts).filter(
-    ([name, url]) => name !== "final_video" && Boolean(url),
-  );
-  if (!logLinks.length) {
-    showEmpty(
-      elements.projectFiles,
-      bi(
-        "当前项目的状态快照、事件日志和迭代记录会显示在这里。",
-        "State snapshots, event logs, and iteration records for the current project will appear here.",
-      ),
-      "artifact-grid empty-state",
-    );
-    return;
-  }
-  elements.projectFiles.className = "artifact-grid";
-  elements.projectFiles.innerHTML = logLinks
-    .map(([name, url]) => {
-      const metadata = ARTIFACT_METADATA[name];
-      return `
-        <a class="artifact-link" href="${url}" target="_blank" rel="noreferrer">
-          <strong>${metadata?.title || name}</strong>
-          <span>${metadata?.description || bi("打开项目资料", "Open project artifact")}</span>
-        </a>
-      `;
-    })
-    .join("");
+  bindImageFallbacks(elements.reviewPanels);
 }
 
 function renderStorybookReview(cards) {
@@ -1056,7 +1496,13 @@ function renderStorybookReview(cards) {
         >
           ${
             card.image_url
-              ? `<img class="storybook-image" src="${card.image_url}" alt="Scene ${card.scene_index}" />`
+              ? `<img
+                  class="storybook-image"
+                  src="${escapeHtml(card.image_url)}"
+                  alt="Scene ${card.scene_index}"
+                  data-image-fallback="${escapeHtml(bi("关键帧暂时不可用", "Keyframe unavailable"))}"
+                  data-fallback-class="storybook-image placeholder"
+                />`
               : `<div class="storybook-image placeholder">${bi("等待关键帧", "Waiting for keyframe")}</div>`
           }
           <div class="storybook-copy">
@@ -1075,9 +1521,6 @@ function renderStorybookReview(cards) {
               <strong>${bi("旁白", "Narration")}</strong>
               <p>${highlightTargetWord(card.spoken_text || bi("旁白尚未生成。", "Narration is not available yet."), card.target_word)}</p>
             </div>
-            <button type="button" class="storybook-link-button" data-storybook-focus="${card.scene_index}">
-              ${bi("聚焦这一帧", "Focus This Scene")}
-            </button>
           </div>
         </article>
       `,
@@ -1090,16 +1533,6 @@ function renderStorybookReview(cards) {
         event.stopPropagation();
         playStorybookScene(button.getAttribute("data-storybook-play"), {
           autoplay: true,
-        });
-      });
-    });
-  elements.storybookReview
-    .querySelectorAll("[data-storybook-focus]")
-    .forEach((button) => {
-      button.addEventListener("click", (event) => {
-        event.stopPropagation();
-        jumpToStorybookScene(button.getAttribute("data-storybook-focus"), {
-          autoplay: false,
         });
       });
     });
@@ -1123,6 +1556,7 @@ function renderStorybookReview(cards) {
       setActiveStorybookCard(state.activeStorybookScene);
     }
   }
+  bindImageFallbacks(elements.storybookReview);
 }
 
 function renderChoiceQuestion(container, question, index, prefix) {
@@ -1157,7 +1591,7 @@ function renderChoiceQuestion(container, question, index, prefix) {
           <span class="mini-chip">${escapeHtml(formatQuestionCategory(questionCategory))}</span>
           ${
             errorReasonTag
-              ? `<span class="mini-chip warning">${escapeHtml(formatErrorReasonTag(errorReasonTag))}</span>`
+              ? `<span class="mini-chip warning hidden" data-quiz-error-tag="${groupId}">${escapeHtml(formatErrorReasonTag(errorReasonTag))}</span>`
               : ""
           }
         </div>
@@ -1211,6 +1645,7 @@ function bindQuizInteractions(root) {
           }
         });
       const feedback = root.querySelector(`[data-quiz-feedback="${groupId}"]`);
+      const errorTag = root.querySelector(`[data-quiz-error-tag="${groupId}"]`);
       if (!feedback) {
         return;
       }
@@ -1226,6 +1661,9 @@ function bindQuizInteractions(root) {
         recommendedScenes,
       };
       feedback.className = `quiz-feedback ${passed ? "success-text" : "danger-text"}`;
+      if (errorTag) {
+        errorTag.classList.toggle("hidden", passed);
+      }
       feedback.innerHTML = passed
         ? `${bi("答对了", "Correct")} · ${explanation || bi("你已经抓住了这个词。", "You got the word.")}`
         : `${bi("正确答案", "Correct answer")}: <strong>${escapeHtml(correct)}</strong>${explanation ? ` · ${explanation}` : ""}`;
@@ -1491,7 +1929,6 @@ function renderResult(job, snapshot) {
     elements.videoPreview.classList.add("hidden");
     elements.videoPreview.removeAttribute("src");
   }
-  renderArtifacts(snapshot);
   renderLearningSummary();
   renderClozeChallenge(snapshot);
   renderStorybookReview(snapshot.storybook_review || []);
@@ -1524,7 +1961,6 @@ function renderSnapshot(job, snapshot) {
   );
   renderTimeline(snapshot.stage_summary);
   renderSceneSummary(snapshot.scene_summaries || []);
-  renderProjectFiles(snapshot);
   renderProgressFeed(snapshot.progress_feed || []);
   renderReviewPanels(snapshot);
   renderRelatedWordFamily(snapshot.related_word_family || null);
