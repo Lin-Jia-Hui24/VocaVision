@@ -45,6 +45,8 @@ The system is implemented as a Python package with a CLI, a FastAPI web console,
 
 The research framing behind VocaVision is that generated video should be treated as a learning-design pipeline, not as a direct text-to-video prompting problem. A visually fluent video may still fail a vocabulary objective if it depicts the wrong word sense, introduces distracting objects, breaks character continuity, misspells a visible target word, or leaves learners with no retrieval practice. VocaVision therefore separates generation into accountable stages with explicit review gates.
 
+> 📘 **Full paper:** [VocaVision: Educationally Constrained Multi-Agent Video Generation for Children’s Foreign-Language Vocabulary Learning](paper/VocaVision.pdf)
+
 <p align="center">
   <img src="photo/system%20pipeline.svg" alt="VocaVision system pipeline" width="100%"/>
 </p>
@@ -212,6 +214,7 @@ Local scene checks are not enough when a recurring character changes across the 
 .
 ├── assets/case-studies/     # Qualitative examples used in the paper
 ├── assets/examples/         # Curated generated demo videos
+├── paper/VocaVision.pdf     # Full research paper
 ├── photo/                   # Paper figures used in this README
 ├── src/vocavision/
 │   ├── agents/              # Multi-agent prompts and model-facing logic
